@@ -3,6 +3,13 @@
 .AppleDouble
 .LSOverride
 
+# Specific
+*.edgelist
+1.d.files*
+Trial/*
+*.txt
+
+
 # Icon must end with two \r
 Icon
 
