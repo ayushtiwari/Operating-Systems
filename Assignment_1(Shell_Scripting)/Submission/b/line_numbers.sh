@@ -1,10 +1,9 @@
 #! /bin/bash
 
+# Create a temporary file
 tmpfile=$(mktemp ./temp.$$)
-inputfile="input.txt"
 
-printf "Serial, RandomString\n" > $tmpfile
-nl -s', ' $inputfile >> $tmpfile
-cat $tmpfile > $inputfile
+awk -f "line_numbers.awk" < 1b_input.txt > $tmpfile
+cat $tmpfile > 1b_input.txt
 
 rm $tmpfile

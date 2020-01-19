@@ -1,5 +1,6 @@
 #! /bin/bash
 
+# GCD of two numbers
 binary_gcd() {
   if [ $# -ne 2 ]
   then
@@ -16,10 +17,13 @@ binary_gcd() {
   fi
 }
 
+# Validity check
 if [ $# -le 10 ] && [ $# -ge 2 ]
 then
   GCD=$1
   shift
+
+  # GCD of multiple numbers
   while [ $# -gt 0 ]
   do
     binary_gcd GCD $1

@@ -1,3 +1,5 @@
+# awk file for counting degrees
+
 {
   table_2[$1]++
   table_2[$2]++
