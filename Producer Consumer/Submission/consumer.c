@@ -14,16 +14,17 @@ int consume_job(int consumer_no, PROC proc) {
 PROC remove_job(int consumer_no, SMT* shmseg) {
     PROC proc = dequeue(&(shmseg->pq));
     // printf("Consumer %d working on job %d for %ds\n", consumer_no, proc.job_id, proc.compute_time);
-    printf("======================\n");
-    printf("New Job Removed From Queue!\n");
-    printf("----------------------\n");
-    printf("Consumer: %d\n", consumer_no);
-    printf("Consumer pid: %d\n", getpid());
-    printf("Producer: %d\n", proc.producer_no);
-    printf("Producer pid: %d\n", proc.producer_pid);
-    printf("Priority: %d\n", proc.priority);
-    printf("Compute Time: %d\n", proc.compute_time);
-    printf("======================\n\n");
+
+    printf("+--------------------------+\n");
+    printf("| Job Removed From PQ      |\n");
+    printf("+--------------+-----------+\n");
+    printf("| Consumer     | %8d  |\n", consumer_no);
+    printf("| Consumer pid | %8d  |\n", getpid());
+    printf("| Producer     | %8d  |\n", proc.producer_no);
+    printf("| Producer pid | %8d  |\n", proc.producer_pid);
+    printf("| Priority     | %8d  |\n", proc.priority);
+    printf("| Compute Time | %8d  |\n", proc.compute_time);
+    printf("+--------------+-----------+\n\n");
     return proc;
 }
 
@@ -51,10 +52,12 @@ int main(int argc, char *argv[]) {
         PROC proc;
         int flag = 0;
         if(shmseg->job_completed < total_jobs) {
-            PROC proc = remove_job(i, shmseg);
+            proc = remove_job(i, shmseg);
             shmseg->job_completed++;
             // print_priority_queue(shmseg->pq);
-            printf("Job completed: %d, Job created: %d\n\n", shmseg->job_completed, shmseg->job_created);
+            printf("+---------------+----------+\n");
+            printf("| Job completed | %8d |\n", shmseg->job_completed);
+            printf("+---------------+----------+\n\n");
             flag = 1;
         }
         semop(semid, &upMutex, 1);

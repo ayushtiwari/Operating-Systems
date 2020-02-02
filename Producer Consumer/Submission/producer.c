@@ -12,14 +12,14 @@ int insert_job(int producer_no, PROC proc, SMT *shmseg) {
     enqueue(&(shmseg->pq), proc);
     // printf("Producer %d inserts job %d\n", producer_no, proc.job_id);
 
-    printf("======================\n");
-    printf("New Job Created!\n");
-    printf("----------------------\n");
-    printf("Producer: %d\n", proc.producer_no);
-    printf("Producer pid: %d\n", proc.producer_pid);
-    printf("Priority: %d\n", proc.priority);
-    printf("Compute Time: %d\n", proc.compute_time);
-    printf("======================\n\n");
+    printf("+--------------------------+\n");
+    printf("| New Job Created!         |\n");
+    printf("+--------------+-----------+\n");
+    printf("| Producer     | %8d  |\n", proc.producer_no);
+    printf("| Producer pid | %8d  |\n", proc.producer_pid);
+    printf("| Priority     | %8d  |\n", proc.priority);
+    printf("| Compute Time | %8d  |\n", proc.compute_time);
+    printf("+--------------+-----------+\n\n");
 
     return 0;
 }
@@ -27,8 +27,8 @@ int insert_job(int producer_no, PROC proc, SMT *shmseg) {
 PROC produce_job(int producer_no, int counter) {
     PROC proc;
     proc.producer_no = producer_no;
-    proc.job_id = counter;
-    proc.priority = rand()%20;
+    proc.job_id = 1 + rand()%100000;
+    proc.priority = 1 + rand()%10;
     proc.producer_pid = getpid();
     proc.compute_time = 1 + rand()%4;
 
@@ -63,8 +63,10 @@ int main(int argc, const char *argv[])
         if(shmseg->job_created < total_jobs) {
             insert_job(i, proc, shmseg);
             shmseg->job_created++;
-            print_priority_queue(shmseg->pq);
-            printf("Job completed: %d, Job created: %d\n\n", shmseg->job_completed, shmseg->job_created);
+            // print_priority_queue(shmseg->pq);
+            printf("+-------------+------------+\n");
+            printf("| Job created | %8d   |\n", shmseg->job_created);
+            printf("+-------------+------------+\n\n");
         }
 
         semop(semid, &upMutex, 1);
