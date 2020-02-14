@@ -42,11 +42,11 @@ int consumer_count = 0;
 
 // Worker type
 typedef struct worker {
-    int wid;
-    enum {RUNNING, READY, TERMINATED, COMPLETED} state;
-    enum {PRODUCER, CONSUMER} w_type;
-    pthread_t *thread;
-    struct worker *next;
+    int wid;							// Worker id
+    enum {RUNNING, READY, TERMINATED, COMPLETED} state;		// state of worker
+    enum {PRODUCER, CONSUMER} w_type;				// Type of worker
+    pthread_t *thread;						// Pointer to the worker thread
+    struct worker *next;					// Next worker
 } WORKER;
 
 WORKER *running;            // Points to running worker
@@ -87,13 +87,8 @@ void pause_handler(int sig, siginfo_t *siginfo, void *context) {
     pause(); 
 }
 void resume_handler(int sig, siginfo_t *siginfo, void *context) { 
-    usleep(10000);
+    usleep(10000);	// virtual scheduler issue :( let's hope that scheduler pause executes before thread signals scheduler
     t = clock();
-}
-
-double time_elapsed() {
-    clock_t diff = clock()-t;
-    return ((double)diff)/CLOCKS_PER_SEC;
 }
 
 void *producer_action(void *arg) {
@@ -101,12 +96,15 @@ void *producer_action(void *arg) {
     pause();
     int i=0;
     while(1) {
- 
+ 	
+	// trylock is used so that lock is acquired without guarantee from OS
+	// lock access time is not considered for calculating thread cpu time, consider it to be a virtual scheduling overhead
         while(pthread_mutex_trylock(&mutex)!=0) {
-            continue;
             usleep(100);
+	    continue;
         }
-        // Critical Section
+        // Critical Section start
+	// Scheduler will not start while this segment is executing
         if(curr_size < NBUF && i < PRODUCER_WORK) {
             buf[curr_size++] = rand()%100000;
             jobs_produced++;
@@ -116,7 +114,8 @@ void *producer_action(void *arg) {
         if(i >= PRODUCER_WORK) {
             running->state = COMPLETED;
         }
-
+	
+	// This is after production so that at least one job is produced for very small time quantum
         clock_t diff = clock()-t;
         double time_taken = ((double)diff)/CLOCKS_PER_SEC;
         if(curr_size==NBUF || time_taken > TIME_QUANTUM) {
@@ -126,7 +125,7 @@ void *producer_action(void *arg) {
             continue;
         }
 
-        // Produce items
+        // Critical section end
         pthread_mutex_unlock(&mutex);
     }
 }
@@ -135,11 +134,14 @@ void *consumer_action(void *arg) {
 
     pause();
     while(1) {
+	// trylock is used so that lock is acquired without guarantee from OS
+	// lock access time is not considered for calculating thread cpu time, consider it to be a virtual scheduling overhead
         while(pthread_mutex_trylock(&mutex)!=0) {
-            continue;
             usleep(100);
+	    continue;
         }
-        // Critical Section
+        // Critical Section start
+	// Scheduler will not start while this segment is executing
         if(curr_size > 0) {
             curr_size--;
             jobs_completed++;
@@ -152,7 +154,7 @@ void *consumer_action(void *arg) {
             pause();
             continue;
         }
-        
+        // Critical section end;
         pthread_mutex_unlock(&mutex);
         // Consume item
     }
@@ -175,24 +177,21 @@ void *status_action() {
     while(1) {
         
         if(running->state == RUNNING) {
-        if(verbose
-    ){
+        if(verbose){
         printf(" %s%sswitch %d\n", BLD, KYEL, switch_no);
         printf("%s----------------+-----------------\n", KNRM);
         }
         printf(" %s%srunning        %s| %s%s[%s %d]     \n", BLD, KCYN, KNRM, BLD, KCYN, (running->w_type==PRODUCER)?"P":"C",running->wid);
         }
         else{
-        if(verbose
-    ){
+        if(verbose){
         printf(" %s%stermination %d\n", BLD, KYEL, termination_no);
         printf("%s----------------+-----------------\n", KNRM);
         }
         printf(" %s%sterminate      %s| %s%s[%s %d]     \n", BLD, KCYN, KNRM, BLD, KCYN, (running->w_type==PRODUCER)?"P":"C", running->wid);
         }
         printf(" %s%sbuffer         %s| %s%s%d/%d       \n", BLD, KCYN, KNRM, BLD, KCYN, curr_size, NBUF);
-        if(verbose
-    ) {
+        if(verbose) {
         printf("%s----------------+-----------------\n", KNRM);
         printf(" %s%sjobs-completed %s| %s%s%d          \n", BLD, KGRN, KNRM, BLD, KGRN, jobs_completed);
         printf(" %s%sjobs-produced  %s| %s%s%d/%d       \n", BLD, KMAG, KNRM, BLD, KMAG, jobs_produced, producer_count*PRODUCER_WORK);
@@ -226,13 +225,15 @@ void *scheduler_action() {
 
         pthread_kill(*(running->thread), SIGUSR2);          // Start the current worker thread
         pause();
-
+	
+	// Acquire the lock, so that the worker is not in the critical section
+	// trylock is not used so that OS guarantees lock access after some time :( "virtual" scheduler issue
         pthread_mutex_lock(&mutex);
         
         pthread_kill(*(running->thread), SIGUSR1);          // Stop the current worker thread
         
         // Set status
-	    if(running->state == COMPLETED || jobs_completed >= producer_count*PRODUCER_WORK) {
+	if(running->state == COMPLETED || jobs_completed >= producer_count*PRODUCER_WORK) {
             termination_no++;
             running->state = TERMINATED;
             pthread_kill(status_thread, SIGUSR2);
