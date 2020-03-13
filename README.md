@@ -10,5 +10,4 @@ Prof. Mainack Mandal
 2. sh Simulator
 3. Producer Consumer
 4. Virtual Scheduler <br/>
------- Midsem -------
-5.
+5. [Pintos Alarm-Clock](https://github.com/ayushtiwari/pintos-CS30002)
